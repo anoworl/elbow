@@ -2,6 +2,13 @@ require 'aws-sdk'
 require 'net/dns'
 require 'capistrano/dsl'
 
+def elb_name(name)
+  packet = Net::DNS::Resolver.start(name)
+  all_cnames= packet.answer.reject { |p| !p.instance_of? Net::DNS::RR::CNAME }
+  cname = all_cnames.find { |c| c.name == "#{name}." }
+  cname ? cname.cname[0..-2].downcase : name
+end
+
 def elastic_load_balancer(name, *args)
 
   include Capistrano::DSL
@@ -18,13 +25,6 @@ def elastic_load_balancer(name, *args)
   load_balancer.instances.each do |instance|
     hostname = instance.dns_name || instance.private_ip_address
     server(hostname, *args)
-  end
-
-  def elb_name(name)
-    packet = Net::DNS::Resolver.start(name)
-    all_cnames= packet.answer.reject { |p| !p.instance_of? Net::DNS::RR::CNAME }
-    cname = all_cnames.find { |c| c.name == "#{name}." }
-    cname ? cname.cname[0..-2].downcase : name
   end
 
 end
